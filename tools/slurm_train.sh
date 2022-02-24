@@ -17,7 +17,9 @@ srun -p ${PARTITION} \
     --gres=gpu:${GPUS_PER_NODE} \
     --ntasks=${GPUS} \
     --ntasks-per-node=${GPUS_PER_NODE} \
+    --nodelist=whitehill-0-02 \
     --cpus-per-task=${CPUS_PER_TASK} \
+    --mem=64G \
     --kill-on-bad-exit=1 \
     ${SRUN_ARGS} \
     python -u tools/train.py ${CONFIG} --launcher="slurm" ${PY_ARGS}

@@ -103,6 +103,7 @@ def parse_args():
 
 
 def main():
+    print(f"Running with {torch.cuda.device_count()} GPUs.")
     args = parse_args()
 
     cfg = Config.fromfile(args.config)
