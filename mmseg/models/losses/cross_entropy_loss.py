@@ -216,3 +216,74 @@ class CrossEntropyLoss(nn.Module):
             str: The name of this loss item.
         """
         return self._loss_name
+
+
+@LOSSES.register_module()
+class ClassificationLoss(nn.Module):
+    def __init__(self,
+                 use_sigmoid=False,
+                 use_mask=False,
+                 reduction='mean',
+                 class_weight=None,
+                 loss_weight=0.4,
+                 loss_name='loss_ce_aux'):
+        super(ClassificationLoss, self).__init__()
+        self.reduction = reduction
+        self.loss_weight = loss_weight
+        self._loss_name = loss_name
+
+    def forward(self,
+                cls_score,
+                label,
+                weight=0.4,
+                reduction_override=None,
+                **kwargs):
+        """Forward function."""
+        assert reduction_override in (None, 'none', 'mean', 'sum')
+
+        # mean loss over each prediction head, multiplied by weight
+        loss = None
+        for class_pred in cls_score:
+            head_loss = nn.BCELoss(reduction="mean")(class_pred, _convert_to_onehot_labels(label, num_classes=150))
+            if loss is None:
+                loss = head_loss
+            else:
+                loss = loss + head_loss
+        
+        loss = loss / len(cls_score)
+        loss = weight * loss
+        return loss
+
+    @property
+    def loss_name(self):
+        """Loss Name.
+
+        This function must be implemented and will return the name of this
+        loss function. This name will be used to combine different loss items
+        by simple sum operation. In addition, if you want this loss item to be
+        included into the backward graph, `loss_` must be the prefix of the
+        name.
+        Returns:
+            str: The name of this loss item.
+        """
+        return self._loss_name
+
+def _convert_to_onehot_labels(seg_label, num_classes):
+    """Convert segmentation label to onehot.
+
+    Args:
+        seg_label (Tensor): Segmentation label of shape (N, H, W).
+        num_classes (int): Number of classes.
+
+    Returns:
+        Tensor: Onehot labels of shape (N, num_classes, 1, 1).
+    """
+
+    batch_size = seg_label.size(0)
+    onehot_labels = seg_label.new_zeros((batch_size, num_classes))
+    for i in range(batch_size):
+        hist = seg_label[i].float().histc(
+            bins=num_classes, min=0, max=num_classes - 1)
+        onehot_labels[i] = hist > 0
+    onehot_labels = onehot_labels.unsqueeze(-1).unsqueeze(-1).float()  # bring back W/H dims
+    return onehot_labels

@@ -110,6 +110,8 @@ class EncoderDecoder(BaseSegmentor):
             loss_aux = self.auxiliary_head.forward_train(
                 x, img_metas, gt_semantic_seg, self.train_cfg)
             losses.update(add_prefix(loss_aux, 'aux'))
+        
+        # losses.update(add_prefix(torch.rand(), f"aux_new"))
 
         return losses
 
