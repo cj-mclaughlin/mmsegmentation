@@ -14,8 +14,9 @@ class DeepSupHead(BaseDecodeHead):
     def __init__(self,
                  in_features=[256, 512, 1024, 2048],
                  in_index=[0, 1, 2, 3],
+                 channels=256,
                  num_classes=150,
-                 dropout=0.1,
+                 norm_cfg = dict(type='SyncBN', requires_grad=True),
                  loss=dict(
                      type="ClassificationLoss",
                      loss_weight=0.4
@@ -25,19 +26,25 @@ class DeepSupHead(BaseDecodeHead):
             input_transform='multiple_select', 
             in_channels=in_features,
             in_index=in_index,
-            channels=1024, 
+            channels=channels, 
             num_classes=num_classes,
             **kwargs
             )
+
+        self.in_index = in_index
         
         self.cls_heads = [
             nn.Sequential(
                 nn.AdaptiveAvgPool2d((1,1)),
-                nn.Dropout2d(p=dropout, inplace=True),
-                nn.Conv2d(in_channels=in_features[i], out_channels=num_classes, kernel_size=1),
+                ConvModule(
+                    in_features[i],
+                    channels,
+                    kernel_size=1,
+                    norm_cfg=norm_cfg),
+                nn.Conv2d(in_channels=channels, out_channels=num_classes, kernel_size=1),
                 nn.Sigmoid()
             ).to("cuda")
-            for i in range(len(in_features))
+            for i in range(len(in_index))
         ]
 
         self.cls_loss = build_loss(loss)
@@ -46,7 +53,7 @@ class DeepSupHead(BaseDecodeHead):
         """Forward function."""
         inputs = self._transform_inputs(inputs)
         cls_predictions = [
-            self.cls_heads[i](inputs[i]) for i in range(len(inputs))
+            self.cls_heads[i](inputs[i]) for i in range(len(self.in_index))
         ]
 
         return cls_predictions
@@ -69,9 +76,9 @@ class DeepSupHead(BaseDecodeHead):
         """
         cls_predictions = self.forward(inputs)
         losses = self.cls_loss(cls_predictions, gt_semantic_seg)
-        ret_dict = dict()
-        ret_dict["class_loss"] = losses
-        return ret_dict
+        loss_dict = dict()
+        loss_dict["loss_class"] = losses
+        return loss_dict #losses # ret_dict
 
     def forward_test(self, inputs, img_metas, test_cfg):
         """Forward function for testing, ignore se_loss."""

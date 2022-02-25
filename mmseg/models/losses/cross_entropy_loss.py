@@ -226,7 +226,7 @@ class ClassificationLoss(nn.Module):
                  reduction='mean',
                  class_weight=None,
                  loss_weight=0.4,
-                 loss_name='loss_ce_aux'):
+                 loss_name='loss_class'):
         super(ClassificationLoss, self).__init__()
         self.reduction = reduction
         self.loss_weight = loss_weight
