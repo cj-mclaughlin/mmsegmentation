@@ -5,6 +5,7 @@ from mmcv.cnn import ConvModule
 
 from mmseg.ops import resize
 from ..builder import HEADS, build_loss
+from ..losses import accuracy
 from .decode_head import BaseDecodeHead
 from .psp_head import PPM
 
@@ -24,8 +25,9 @@ class UPerHead(BaseDecodeHead):
 
     def __init__(self, 
                 pool_scales=(1, 2, 3, 6),
-                loss=dict(
-                     type="JointLoss"
+                loss_decode=dict(
+                     type="JointLoss",
+                     loss_weight = 1.0
                 ),
                 class_loss_weight=0.25,
                 **kwargs):
@@ -93,8 +95,8 @@ class UPerHead(BaseDecodeHead):
             self.conv_seg
         ).to("cuda")
 
-        self.class_loss = class_loss_weight
-        self.loss = build_loss(loss)
+        self.class_loss_weight = class_loss_weight
+        self.loss = build_loss(loss_decode)
 
     def psp_forward(self, inputs):
         """Forward function of PSP module."""
@@ -165,27 +167,30 @@ class UPerHead(BaseDecodeHead):
         Returns:
             dict[str, Tensor]: a dictionary of loss components
         """
-        classification, segmentation = self.forward(inputs)
+        segmentation, classification = self.forward(inputs)
         segmentation = resize(segmentation, size=gt_semantic_seg.size()[2:], mode="bilinear")
-        class_loss, seg_loss = self.cls_loss((classification, segmentation), gt_semantic_seg)
+        seg_loss, class_loss = self.loss((segmentation, classification), gt_semantic_seg)
         # get l2 norm of segmentation loss
         seg_loss.backward(retain_graph=True)
         seg_norm = torch.norm(self.conv_seg.weight.grad, p=2)
         self.zero_grad()
-        class_loss.backward(retain_graph=True)
-        class_norm = torch.norm(self.conv_seg.weight.grad, p=2)
-        self.zero_grad()
+
+        # class_loss.backward(retain_graph=True)
+        # class_norm = torch.norm(self.conv_seg.weight.grad, p=2)
+        # self.zero_grad()
         
-        class_weight = (seg_norm / class_norm)
-        class_loss = class_loss * class_weight
+        # class_weight = (seg_norm / class_norm)
+        # class_loss = class_loss * class_weight
 
         loss = self.class_loss_weight * class_loss + (1 - self.class_loss_weight) * seg_loss
         loss.backward(retain_graph = True)
         joint_norm = torch.norm(self.conv_seg.weight.grad, p=2)
-        loss = loss * (seg_norm / joint_norm)
+        loss = loss * (seg_norm.detach() / joint_norm.detach())
         self.zero_grad()
 
         loss_dict = dict()
+        loss['acc_seg'] = accuracy(
+            segmentation, gt_semantic_seg.squeeze(1), ignore_index=self.ignore_index)
         loss_dict["loss_joint"] = loss
         return loss_dict
 

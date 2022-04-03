@@ -241,11 +241,15 @@ class JointLoss(nn.Module):
         """Forward function."""
         assert reduction_override in (None, 'none', 'mean', 'sum')
 
-        classification, segmentation = predictions
+        segmentation, classification = predictions
+        seg_loss = nn.CrossEntropyLoss(ignore_index=255)(segmentation, label.squeeze(1))
         class_loss = nn.BCEWithLogitsLoss()(classification, _convert_to_onehot_labels(label, num_classes=150))
-        seg_loss = nn.CrossEntropyLoss(ignore_index=255)(segmentation, label.squeeze())
         
-        return class_loss, seg_loss
+        # loss weight
+        seg_loss = seg_loss * self.loss_weight
+        class_loss = class_loss * self.loss_weight
+
+        return seg_loss, class_loss
 
     @property
     def loss_name(self):
