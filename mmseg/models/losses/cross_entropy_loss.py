@@ -219,21 +219,21 @@ class CrossEntropyLoss(nn.Module):
 
 
 @LOSSES.register_module()
-class ClassificationLoss(nn.Module):
+class JointLoss(nn.Module):
     def __init__(self,
                  use_sigmoid=False,
                  use_mask=False,
                  reduction='mean',
                  class_weight=None,
                  loss_weight=0.4,
-                 loss_name='loss_class'):
-        super(ClassificationLoss, self).__init__()
+                 loss_name='loss_joint'):
+        super(JointLoss, self).__init__()
         self.reduction = reduction
         self.loss_weight = loss_weight
         self._loss_name = loss_name
 
     def forward(self,
-                cls_score,
+                predictions,
                 label,
                 weight=0.4,
                 reduction_override=None,
@@ -241,18 +241,11 @@ class ClassificationLoss(nn.Module):
         """Forward function."""
         assert reduction_override in (None, 'none', 'mean', 'sum')
 
-        # mean loss over each prediction head, multiplied by weight
-        loss = None
-        for class_pred in cls_score:
-            head_loss = nn.BCELoss(reduction="mean")(class_pred, _convert_to_onehot_labels(label, num_classes=150))
-            if loss is None:
-                loss = head_loss
-            else:
-                loss = loss + head_loss
+        classification, segmentation = predictions
+        class_loss = nn.BCEWithLogitsLoss()(classification, _convert_to_onehot_labels(label, num_classes=150))
+        seg_loss = nn.CrossEntropyLoss(ignore_index=255)(segmentation, label.squeeze())
         
-        loss = loss / len(cls_score)
-        loss = weight * loss
-        return loss
+        return class_loss, seg_loss
 
     @property
     def loss_name(self):

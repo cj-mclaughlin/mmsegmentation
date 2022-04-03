@@ -1,6 +1,6 @@
 # Copyright (c) OpenMMLab. All rights reserved.
 from .accuracy import Accuracy, accuracy
-from .cross_entropy_loss import (CrossEntropyLoss, ClassificationLoss, binary_cross_entropy,
+from .cross_entropy_loss import (CrossEntropyLoss, JointLoss, binary_cross_entropy,
                                  cross_entropy, mask_cross_entropy)
 from .dice_loss import DiceLoss
 from .focal_loss import FocalLoss
@@ -11,5 +11,5 @@ __all__ = [
     'accuracy', 'Accuracy', 'cross_entropy', 'binary_cross_entropy',
     'mask_cross_entropy', 'CrossEntropyLoss', 'reduce_loss',
     'weight_reduce_loss', 'weighted_loss', 'LovaszLoss', 'DiceLoss',
-    'FocalLoss', 'ClassificationLoss'
+    'FocalLoss', 'JointLoss'
 ]
