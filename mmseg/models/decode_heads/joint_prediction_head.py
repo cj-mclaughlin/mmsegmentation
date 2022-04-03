@@ -103,7 +103,7 @@ class JointPredictionHead(BaseDecodeHead):
 
         loss_dict = dict()
         loss_dict["loss_joint"] = loss
-        loss['acc_seg'] = accuracy(
+        loss_dict['acc_seg'] = accuracy(
             segmentation, gt_semantic_seg.squeeze(1), ignore_index=self.ignore_index)
         return loss_dict
 

@@ -175,6 +175,7 @@ class UPerHead(BaseDecodeHead):
         seg_norm = torch.norm(self.conv_seg.weight.grad, p=2)
         self.zero_grad()
 
+        assert self.conv_seg.weight.grad is None or torch.allclose(self.conv_seg.weight.grad, torch.zeros_like(self.conv_seg.weight.grad))
         # class_loss.backward(retain_graph=True)
         # class_norm = torch.norm(self.conv_seg.weight.grad, p=2)
         # self.zero_grad()
@@ -189,7 +190,8 @@ class UPerHead(BaseDecodeHead):
         self.zero_grad()
 
         loss_dict = dict()
-        loss['acc_seg'] = accuracy(
+        
+        loss_dict['acc_seg'] = accuracy(
             segmentation, gt_semantic_seg.squeeze(1), ignore_index=self.ignore_index)
         loss_dict["loss_joint"] = loss
         return loss_dict
