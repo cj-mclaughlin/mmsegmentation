@@ -35,20 +35,18 @@ model = dict(
         norm_cfg=norm_cfg,
         align_corners=False,
         loss_decode=dict(
-            type='CrossEntropyLoss', use_sigmoid=False, loss_weight=1.0)),
+            type='JointLoss', use_sigmoid=False, loss_weight=1.0)),
     auxiliary_head=dict(
-        type='FCNHead',
+        type='JointPredictionHead',
         in_channels=384,
         in_index=2,
         channels=256,
-        num_convs=1,
-        concat_input=False,
         dropout_ratio=0.1,
-        num_classes=19,
+        class_loss_weight=0.25,
         norm_cfg=norm_cfg,
         align_corners=False,
         loss_decode=dict(
-            type='CrossEntropyLoss', use_sigmoid=False, loss_weight=0.4)),
+            type='JointLoss', use_sigmoid=False, loss_weight=0.4)),
     # model training and testing settings
     train_cfg=dict(),
     test_cfg=dict(mode='whole'))

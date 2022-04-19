@@ -38,19 +38,19 @@ class JointPredictionHead(BaseDecodeHead):
         self.bottleneck = ConvModule(in_channels[0], channels, kernel_size=1, norm_cfg=norm_cfg)
 
         # classification head
-        self.classification_head = nn.Sequential(
-                            self.bottleneck,
-                            self.dropout,
-                            nn.AdaptiveMaxPool2d((1,1)),
-                            self.conv_seg
-                        ).to("cuda")
+        # self.classification_head = nn.Sequential(
+        #                     self.bottleneck,
+        #                     self.dropout,
+        #                     nn.AdaptiveMaxPool2d((1,1)),
+        #                     self.conv_seg
+        #                 ).to("cuda")
 
         # segmentation head
-        self.segmentation_head = nn.Sequential(
-            self.bottleneck,
-            self.dropout,
-            self.conv_seg
-        ).to("cuda")
+        # self.segmentation_head = nn.Sequential(
+        #     self.bottleneck,
+        #     self.dropout,
+        #     self.conv_seg
+        # ).to("cuda")
 
         self.loss = build_loss(loss_decode)
 
@@ -59,9 +59,11 @@ class JointPredictionHead(BaseDecodeHead):
         """Compute both classification and segmentation with same weights."""
         inputs = self._transform_inputs(inputs)
 
-        segmentation = self.segmentation_head(inputs[0])
-        classification = self.classification_head(inputs[0])
-    
+        features = self.dropout(self.bottleneck(inputs[0]))
+
+        classification = self.conv_seg(nn.AdaptiveAvgPool2d((1,1))(features))
+        segmentation = self.conv_seg(features)
+
         return segmentation, classification
 
     def forward_train(self, inputs, img_metas, gt_semantic_seg, train_cfg):

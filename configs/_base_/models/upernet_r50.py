@@ -34,6 +34,8 @@ model = dict(
         channels=256,
         class_loss_weight=0,
         align_corners=False),
+        loss_decode=dict(
+            type='JointLoss', use_sigmoid=False, loss_weight=0.4),
     # model training and testing settings
     train_cfg=dict(),
     test_cfg=dict(mode='whole'))

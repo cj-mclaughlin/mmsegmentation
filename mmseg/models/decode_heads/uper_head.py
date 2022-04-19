@@ -85,15 +85,15 @@ class UPerHead(BaseDecodeHead):
             act_cfg=self.act_cfg)
 
         # classification head
-        self.classification_head = nn.Sequential(
-            nn.AdaptiveAvgPool2d((1,1)),
-            self.conv_seg
-        ).to("cuda")
+        # self.classification_head = nn.Sequential(
+        #     nn.AdaptiveAvgPool2d((1,1)),
+        #     self.conv_seg
+        # ).to("cuda")
 
-        # segmentation head
-        self.segmentation_head = nn.Sequential(
-            self.conv_seg
-        ).to("cuda")
+        # # segmentation head
+        # self.segmentation_head = nn.Sequential(
+        #     self.conv_seg
+        # ).to("cuda")
 
         self.class_loss_weight = class_loss_weight
         self.loss = build_loss(loss_decode)
@@ -148,7 +148,8 @@ class UPerHead(BaseDecodeHead):
         fpn_outs = torch.cat(fpn_outs, dim=1)
         output = self.fpn_bottleneck(fpn_outs)
         output = self.dropout(output)
-        segmentation, classification = self.segmentation_head(output), self.classification_head(output)
+        segmentation = self.conv_seg(output)
+        classification = self.conv_seg(nn.AdaptiveAvgPool2d((1,1))(output))
         return segmentation, classification
 
     def forward_train(self, inputs, img_metas, gt_semantic_seg, train_cfg):
@@ -175,7 +176,7 @@ class UPerHead(BaseDecodeHead):
         seg_norm = torch.norm(self.conv_seg.weight.grad, p=2)
         self.zero_grad()
 
-        assert self.conv_seg.weight.grad is None or torch.allclose(self.conv_seg.weight.grad, torch.zeros_like(self.conv_seg.weight.grad))
+        # assert self.conv_seg.weight.grad is None or torch.allclose(self.conv_seg.weight.grad, torch.zeros_like(self.conv_seg.weight.grad))
         # class_loss.backward(retain_graph=True)
         # class_norm = torch.norm(self.conv_seg.weight.grad, p=2)
         # self.zero_grad()
